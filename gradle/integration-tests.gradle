@@ -1,0 +1,45 @@
+apply plugin: 'java'
+apply plugin: 'idea'
+
+sourceSets {
+    integTest {
+        compileClasspath += sourceSets.main.output
+        compileClasspath += sourceSets.test.output
+        runtimeClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.test.output
+    }
+}
+
+configurations {
+    integTestImplementation.extendsFrom testImplementation
+    integTestRuntimeOnly.extendsFrom testRuntimeOnly
+}
+
+compileIntegTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+idea {
+    module {
+        testSourceDirs += project.sourceSets.integTest.kotlin.srcDirs
+    }
+}
+
+task integTest(type: Test) {
+    useJUnitPlatform()
+    include 'com/touch/paylater/**'
+    reports.html.enabled = !isCiServer
+    environment("aws_access_key_id", "AKIAIOSFODNN7EXAMPLE")
+    environment("aws_secret_access_key", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+
+    description = 'Runs integration tests.'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.integTest.output.classesDirs
+    classpath = sourceSets.integTest.runtimeClasspath
+    mustRunAfter test
+}
+
+check.dependsOn integTest
