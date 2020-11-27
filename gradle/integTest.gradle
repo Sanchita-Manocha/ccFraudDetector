@@ -22,3 +22,22 @@ idea {
     }
 }
 
+compileIntegTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+
+task integTest(type: Test) {
+    useJUnitPlatform()
+    include 'com/au/frauddetector/detector/**'
+
+
+    description = 'Runs integration tests.'
+    group = 'verification'
+
+    testClassesDirs = sourceSets.integTest.output.classesDirs
+    classpath = sourceSets.integTest.runtimeClasspath
+    mustRunAfter test
+}

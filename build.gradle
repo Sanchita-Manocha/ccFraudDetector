@@ -1,5 +1,6 @@
 plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.4.10'
+    id 'jacoco'
 }
 apply from: "${rootDir}/gradle/integTest.gradle"
 
@@ -8,8 +9,26 @@ repositories {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib"
-    testImplementation(
-            "org.junit.jupiter:junit-jupiter-api:$junitVersion"
+    implementation (
+            "org.jetbrains.kotlin:kotlin-stdlib-jdk8",
+            "org.slf4j:slf4j-api:$slf4jVersion",
+            "org.slf4j:slf4j-simple:$slf4jVersion"
+
     )
+
+    testImplementation(
+            "org.junit.jupiter:junit-jupiter-api:$junitVersion",
+            "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+    )
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+integTest.onlyIf {gradle.startParameter.taskNames.any { it.contains("integTest") }}
+
+jacocoTestReport {
+    dependsOn test
 }

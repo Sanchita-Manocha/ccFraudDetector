@@ -1,15 +1,21 @@
 package com.au.frauddetector.detector
 
+import com.au.frauddetector.config.Config
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import java.io.FileNotFoundException
 
 internal class FraudDetectorTest {
     @Test
     fun `throws exception when csv not found`() {
+        val testConfig = Config.defaultConfig().let { it.copy(sourceFile = "not_existing.csv") }
+        assertThrows<FileNotFoundException> { FraudDetector(testConfig).getFraudCards() }
     }
 
     @Test
     fun `ignores invalid transaction records`() {
-
+        val testConfig = Config.defaultConfig().let { it.copy(sourceFile = "sample_file_with_few_invalid_txns.csv") }
+        FraudDetector(testConfig).getFraudCards()
     }
 
     @Test
