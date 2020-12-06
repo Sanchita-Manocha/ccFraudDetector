@@ -1,6 +1,7 @@
 package com.au.frauddetector.detector
 
 import com.au.frauddetector.config.Config
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.FileNotFoundException
@@ -15,7 +16,10 @@ internal class FraudDetectorTest {
     @Test
     fun `ignores invalid transaction records`() {
         val testConfig = Config.defaultConfig().let { it.copy(sourceFile = "sample_file_with_few_invalid_txns.csv") }
-        FraudDetector(testConfig).getFraudCards()
+        val fraudCards = FraudDetector(testConfig).getFraudCards()
+        assertEquals(1, fraudCards.size)
+        assertEquals("10d7ce2f43e45fa57d1bbf8b1e2", fraudCards.single())
+
     }
 
     @Test

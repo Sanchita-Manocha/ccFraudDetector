@@ -28,6 +28,18 @@ compileIntegTestKotlin {
     }
 }
 
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
 
 task integTest(type: Test) {
     useJUnitPlatform()

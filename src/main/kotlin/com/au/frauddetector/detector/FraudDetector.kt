@@ -3,82 +3,56 @@ package com.au.frauddetector.detector
 
 import com.au.frauddetector.config.Config
 import com.au.frauddetector.domain.Transaction
+import com.au.frauddetector.parser.readCSVFileToTransactions
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileNotFoundException
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.math.BigDecimal
 
-class FraudDetector(private val config: Config) {
-    val logger = LoggerFactory.getLogger(this::class.java)
+private val logger = LoggerFactory.getLogger(object {}::class.java.`package`.name)
 
-    fun getFraudCards() {
-        val fileRows = readTxFileToList()
-        val fraudCards = fraudCards(validTxns(fileRows))
+class FraudDetector(private val config: Config){
+
+    fun detectFraud(): Set<String> {
+        val fileURL = this::class.java.classLoader.getResource(config.sourceFile)
+            ?: throw FileNotFoundException().also {
+                logger.error("${config.sourceFile} does not exist") }
+        return getFraudCards(
+            config.priceThreshold,
+            config.slidingTimeWindowInHours,
+            readCSVFileToTransactions(File(fileURL.file))
+        )
     }
 
-    private fun fraudCards(transactions: List<Transaction?>): List<String> {
-        var fraudCards = mutableListOf<String>()
-        if (transactions.size > 0) {
-            transactions?.fold(mutableMapOf<String, List<Transaction>>()) { results, txn ->
-                if (!results.containsKey(txn!!.creditCardNumber)) {
-                    mutableMapOf(txn.creditCardNumber to mutableListOf(txn!!))
-                } else {
-                    results[txn.creditCardNumber]?.forEach {
-                        if ((txn.time - it.time) <= config.slidingTimeWindowInHours &&
-                            it.amount + txn.amount >= config.priceThreshold
-                        ) {
-                            fraudCards.add(txn.creditCardNumber)
-                        }
-                    }
-                    results[txn.creditCardNumber] = results[txn.creditCardNumber]!!.plus(txn)
-                    results
-                }
-            }
-        }
-        return fraudCards
-    }
 
-    private fun readTxFileToList(): List<String> {
-        val filePath = this::class.java.classLoader.getResource(config.sourceFile)
-        filePath ?: throw FileNotFoundException("${config.sourceFile} File not found")
-        return File(filePath.file).useLines { it.toList() }.also {
-            logger.info("Reading transactions from File - '${config.sourceFile}'")
-        }
-    }
-
-    private fun validTxns(fileRows: List<String>): List<Transaction?> {
-        return fileRows
-            .map { convertToTransaction(it) }
-            .filter { (it != null) }
-            .toList()
-    }
 }
 
-private fun stringDateToUnixTime(time: String): Long {
-    return LocalDate.parse(time, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
-        .atStartOfDay(ZoneId.of("UTC"))
-        .toInstant()
-        .epochSecond
+fun getFraudCards(
+    priceThreshold: BigDecimal,
+    slidingTimeWindowInHours: Int,
+    transactions: List<Transaction>
+): Set<String> {
+    if (transactions.isEmpty())
+        return emptySet()
+    return transactions.groupBy { it.creditCardNumber }
+        .filter {
+            isCardFraud(priceThreshold, slidingTimeWindowInHours, it.value)
+        }.keys
 }
 
-private fun convertToTransaction(row: String): Transaction? {
-    var txn : Transaction? = null
-    try {
-        val fields = row.split(",")
-        if (fields.size == 3) {
-            txn = Transaction(
-                creditCardNumber = fields[0],
-                time = stringDateToUnixTime(fields[1].removeWhiteSpaces()),
-                amount = fields[2].removeWhiteSpaces().toBigDecimal()
-            )
-        }
+fun isCardFraud(priceThreshold: BigDecimal, timeWindowInHours: Int, transactions: List<Transaction>): Boolean {
+    transactions.forEachIndexed { index, txn ->
+        val totalAmount = getTotalAmountWithInTimeWindow(txn.time, timeWindowInHours, transactions.subList(0, index + 1))
+        if (totalAmount >= priceThreshold)
+            return true
     }
-    catch (e : Exception){
-        e.printStackTrace()
-    }
-    return txn
+    return false
 }
 
-fun String.removeWhiteSpaces () = this.replace("\\s".toRegex(), "")
+fun getTotalAmountWithInTimeWindow(
+    transactionTime: Long,
+    timeWindowInHours: Int,
+    transactions: List<Transaction>
+): BigDecimal {
+    return transactions.filter { transactionTime - it.time <= timeWindowInHours * 60 * 60 }.sumOf { it.amount }
+}
