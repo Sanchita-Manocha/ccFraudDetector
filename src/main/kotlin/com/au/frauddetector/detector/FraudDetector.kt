@@ -42,7 +42,7 @@ fun getFraudCards(
 
 fun isCardFraud(priceThreshold: BigDecimal, timeWindowInHours: Int, transactions: List<Transaction>): Boolean {
     transactions.forEachIndexed { index, txn ->
-        val totalAmount = getTotalAmountWithInTimeWindow(txn.time, timeWindowInHours, transactions.subList(0, index + 1))
+        val totalAmount = getTotalAmountWithInTimeWindow(txn.unixTime, timeWindowInHours, transactions.subList(0, index + 1))
         if (totalAmount >= priceThreshold)
             return true
     }
@@ -54,5 +54,5 @@ fun getTotalAmountWithInTimeWindow(
     timeWindowInHours: Int,
     transactions: List<Transaction>
 ): BigDecimal {
-    return transactions.filter { transactionTime - it.time <= timeWindowInHours * 60 * 60 }.sumOf { it.amount }
+    return transactions.filter { transactionTime - it.unixTime <= timeWindowInHours * 60 * 60 }.sumOf { it.amount }
 }

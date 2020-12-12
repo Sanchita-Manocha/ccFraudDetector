@@ -31,7 +31,7 @@ fun convertToTransaction(index: Int, row: String): Transaction? {
         else {
             txn = Transaction(
                 creditCardNumber = fields[0],
-                time = stringDateToUnixTime(fields[1].removeWhiteSpaces()),
+                time = stringDateToLocalDateTime(fields[1].removeWhiteSpaces()),
                 amount = fields[2].removeWhiteSpaces().toBigDecimal()
             )
         }
@@ -51,6 +51,10 @@ private fun logInvalidTxn(index: Int, row: String) {
 private fun stringDateToUnixTime(time: String): Long {
     return LocalDateTime.parse(time, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
         .toEpochSecond(ZoneOffset.UTC)
+}
+
+private fun stringDateToLocalDateTime(time: String): LocalDateTime {
+    return LocalDateTime.parse(time, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"))
 }
 
 fun String.removeWhiteSpaces() = this.replace("\\s".toRegex(), "")
